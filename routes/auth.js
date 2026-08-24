@@ -1,0 +1,57 @@
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const supabase = require('../supabaseClient');
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// 1. API Đăng ký
+router.post('/register', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const { data, error } = await supabase
+      .from('users')
+      .insert([{ username, password: hashedPassword }])
+      .select();
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ message: "Đăng ký thành công!", user: data[0] });
+  } catch (err) {
+    res.status(500).json({ error: "Lỗi Server nội bộ" });
+  }
+});
+
+// 2. API Đăng nhập
+router.post('/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: "Vui lòng nhập đầy đủ thông tin!" });
+    }
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .single();
+
+    if (error || !data) return res.status(400).json({ error: "Tài khoản không tồn tại!" });
+
+    const isValidPassword = await bcrypt.compare(password, data.password);
+    if (!isValidPassword) return res.status(401).json({ error: "Sai mật khẩu!" });
+
+    const token = jwt.sign({ id: data.id, username: data.username }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ message: "Đăng nhập thành công", token });
+  } catch (err) {
+    res.status(500).json({ error: "Lỗi Server nội bộ" });
+  }
+});
+
+module.exports = router;
