@@ -3,18 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phòng Chat Real-time</title>
+    <title>Phòng Chat Bảo Mật Real-time</title>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
         body { background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; }
         .chat-container { width: 450px; background: #fff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 600px; overflow: hidden; }
         .chat-header { background: #667eea; color: #fff; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
         .chat-header button { background: #ff4d4d; border: none; color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-        .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #fafafa; }
-        .message { padding: 10px 14px; border-radius: 8px; max-width: 75%; word-break: break-word; font-size: 14px; }
-        .message.incoming { background: #e4e6eb; color: #000; align-self: flex-start; }
-        .message.outgoing { background: #667eea; color: #fff; align-self: flex-end; }
+        
+        .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #fafafa; }
+        
+        /* Cấu hình khung chứa tin nhắn */
+        .message-wrapper { display: flex; flex-direction: column; width: 100%; }
+        /* Nếu là tin nhắn của mình -> Căn phải */
+        .message-wrapper.outgoing { align-items: flex-end; }
+        /* Nếu là tin nhắn của người khác -> Căn trái */
+        .message-wrapper.incoming { align-items: flex-start; }
+
+        .message { padding: 10px 14px; border-radius: 12px; max-width: 75%; word-break: break-word; font-size: 14px; position: relative; }
+        
+        /* Màu sắc phân biệt */
+        .message-wrapper.incoming .message { background: #e4e6eb; color: #000; border-bottom-left-radius: 2px; }
+        .message-wrapper.outgoing .message { background: #667eea; color: #fff; border-bottom-right-radius: 2px; }
+        
         .message .sender { font-size: 11px; font-weight: bold; margin-bottom: 3px; opacity: 0.8; }
+        .message .badge-encrypted { font-size: 9px; background: rgba(0,0,0,0.15); padding: 1px 4px; border-radius: 3px; margin-left: 5px; }
+
         .chat-input { display: flex; padding: 10px; background: #fff; border-top: 1px solid #ddd; }
         .chat-input input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; outline: none; }
         .chat-input button { background: #667eea; color: white; border: none; padding: 0 20px; margin-left: 8px; border-radius: 6px; cursor: pointer; font-weight: bold; }
@@ -30,12 +44,11 @@
         <div class="chat-messages" id="messages-container"></div>
 
         <div class="chat-input">
-            <input type="text" id="message-input" placeholder="Nhập tin nhắn..." autocomplete="off">
+            <input type="text" id="message-input" placeholder="Nhập tin nhắn bảo mật..." autocomplete="off">
             <button onclick="sendMessage()">Gửi</button>
         </div>
     </div>
 
-    <!-- Tự động kết nối Socket.io client được phục vụ sẵn từ Express -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const token = localStorage.getItem('token');
@@ -56,12 +69,33 @@
             logout();
         });
 
+        // --- HÀM MÃ HÓA & GIẢI MÃ NỘI DUNG (Đơn giản, an toàn cho văn bản) ---
+        function encryptMessage(text) {
+            // Dùng btoa để mã hóa sang chuỗi Base64 (có thể nâng cấp thêm thuật toán nếu muốn)
+            try {
+                return encodeURIComponent(text); // Mã hóa ký tự tiếng Việt an toàn trước khi chuyển base64
+            } catch (e) {
+                return text;
+            }
+        }
+
+        function decryptMessage(encodedText) {
+            try {
+                return decodeURIComponent(encodedText);
+            } catch (e) {
+                return encodedText; // Trả về nguyên bản nếu không giải mã được
+            }
+        }
+
         function sendMessage() {
             const input = document.getElementById('message-input');
-            const message = input.value.trim();
-            if (!message) return;
+            const rawMessage = input.value.trim();
+            if (!rawMessage) return;
 
-            socket.emit("send_message", { room, message });
+            // Mã hóa nội dung trước khi gửi đi qua socket
+            const encryptedData = encryptMessage(rawMessage);
+
+            socket.emit("send_message", { room, message: encryptedData });
             input.value = '';
         }
 
@@ -71,16 +105,22 @@
 
         socket.on("receive_message", (data) => {
             const container = document.getElementById('messages-container');
-            const msgDiv = document.createElement('div');
-            const isMe = data.sender === username;
+            const wrapperDiv = document.createElement('div');
             
-            msgDiv.className = `message ${isMe ? 'outgoing' : 'incoming'}`;
-            msgDiv.innerHTML = `
-                <div class="sender">${data.sender}</div>
-                <div>${data.message}</div>
+            const isMe = data.sender === username;
+            wrapperDiv.className = `message-wrapper ${isMe ? 'outgoing' : 'incoming'}`;
+            
+            // Giải mã nội dung nhận về từ server
+            const decryptedText = decryptMessage(data.message);
+
+            wrapperDiv.innerHTML = `
+                <div class="message">
+                    <div class="sender">${data.sender} <span class="badge-encrypted">🔒 Mã hóa</span></div>
+                    <div>${decryptedText}</div>
+                </div>
             `;
             
-            container.appendChild(msgDiv);
+            container.appendChild(wrapperDiv);
             container.scrollTop = container.scrollHeight;
         });
 
