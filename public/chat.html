@@ -45,7 +45,7 @@
         const room = "phong-chung";
         document.getElementById('room-title').innerText = `Phòng: ${room} (${username})`;
 
-        const socket = io("https://chatserver-hhrp.onrender.com:3000", { auth: { token } });
+        const socket = io("https://chatserver-hhrp.onrender.com", { auth: { token } });
 
         socket.on("connect", () => {
             socket.emit("join_room", room);
