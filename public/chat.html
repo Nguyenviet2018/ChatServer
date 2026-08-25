@@ -16,9 +16,10 @@
             display: flex; 
             height: 750px; 
             overflow: hidden; 
+            position: relative;
         }
         
-        /* Sidebar danh sách user online */
+        /* Sidebar danh sách user online trên máy tính */
         .sidebar { 
             width: 170px; 
             background: #2f3136; 
@@ -62,12 +63,81 @@
         .chat-input button.send-btn:hover { background: #5a6fd6; }
         #file-input { display: none; }
 
+        /* ================= POPUP DANH SÁCH ONLINE CHO MOBILE ================= */
+        .mobile-online-btn {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 10px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            display: none; /* Mặc định ẩn trên máy tính, chỉ hiện trên mobile */
+            align-items: center;
+            gap: 5px;
+        }
+        .mobile-online-btn:hover { background: rgba(255, 255, 255, 0.3); }
+
+        /* Khung Modal Pop-up */
+        .modal-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+        .modal-content {
+            background: #fff;
+            width: 85%;
+            max-width: 320px;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            animation: fadeIn 0.2s ease-in-out;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: #777;
+        }
+        .modal-list {
+            list-style: none;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .modal-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f9f9f9;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #333;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
         /* ================= RESPONSIVE CHO ĐIỆN THOẠI ================= */
         @media screen and (max-width: 768px) {
             body { 
                 align-items: flex-start; 
                 height: 100vh; 
-                height: 100dvh; /* Khớp chuẩn chiều cao thực tế trên Mobile */
+                height: 100dvh; 
                 background: #fff;
             }
             .chat-container { 
@@ -75,20 +145,13 @@
                 height: 100%; 
                 border-radius: 0; 
                 box-shadow: none; 
-                flex-direction: column-reverse; /* Đưa danh sách online xuống dưới hoặc ẩn bớt nếu muốn, hiện tại đảo cấu trúc cho linh hoạt */
             }
-            .sidebar { 
-                width: 100%; 
-                height: 50px; 
-                flex-direction: row; 
-                align-items: center; 
-                justify-content: space-between; 
-                padding: 0 15px;
-            }
-            .sidebar h3 { margin-bottom: 0; border-bottom: none; font-size: 13px; }
-            .online-list { display: none; /* Ẩn danh sách chi tiết trên ĐT để tiết kiệm diện tích khung chat */ }
+            /* Ẩn sidebar cột dọc bên trái trên điện thoại */
+            .sidebar { display: none; }
             
-            .main-chat { height: calc(100% - 50px); }
+            /* Hiện nút bấm xem online trên điện thoại */
+            .mobile-online-btn { display: flex; }
+            
             .chat-messages { padding: 10px; }
             .message { max-width: 88%; font-size: 14px; }
         }
@@ -96,16 +159,22 @@
 </head>
 <body>
     <div class="chat-container">
-        <!-- Sidebar danh sách user online -->
+        <!-- Sidebar danh sách user online (Chỉ hiện trên Máy tính) -->
         <div class="sidebar">
-            <h3>🟢 Online (<span id="online-count">0</span>)</h3>
-            <ul id="online-users-list" class="online-list"></ul>
+            <h3>🟢 Online (<span id="sidebar-online-count">0</span>)</h3>
+            <ul id="sidebar-online-users-list" class="online-list"></ul>
         </div>
 
         <!-- Khung chat chính -->
         <div class="main-chat">
             <div class="chat-header">
-                <span id="room-title">Phòng chat</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span id="room-title">Phòng chat</span>
+                    <!-- Nút bấm chữ Online trên điện thoại -->
+                    <div class="mobile-online-btn" onclick="openOnlineModal()">
+                        🟢 <span id="mobile-online-count">0</span> Online
+                    </div>
+                </div>
                 <button onclick="logout()">Đăng xuất</button>
             </div>
             
@@ -121,6 +190,17 @@
         </div>
     </div>
 
+    <!-- Modal Popup danh sách online dành riêng cho điện thoại khi bấm vào -->
+    <div class="modal-overlay" id="online-modal" onclick="closeOnlineModalOnOutside(event)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>🟢 Thành viên đang online (<span id="modal-online-count">0</span>)</span>
+                <button class="close-modal" onclick="closeOnlineModal()">×</button>
+            </div>
+            <ul id="modal-online-users-list" class="modal-list"></ul>
+        </div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const token = localStorage.getItem('token');
@@ -129,8 +209,8 @@
             window.location.href = '/index.html'; 
         }
 
-        const room = "phòng-chung";
-        document.getElementById('room-title').innerText = `Phòng: ${room}`;
+        const room = "Room:";
+        document.getElementById('room-title').innerText = `${room}`;
 
         const serverURL = "https://chatserver-7mdd.onrender.com";
         const socket = io(serverURL, { auth: { token } });
@@ -141,23 +221,51 @@
             logUserIPAndLocation();
         });
 
+        // Xử lý đồng bộ danh sách online cho cả Sidebar (Máy tính) và Modal Popup (Điện thoại)
         socket.on('update_online_users', (users) => {
-            const userListContainer = document.getElementById('online-users-list');
-            const onlineCount = document.getElementById('online-count');
-            if (!onlineCount) return;
-
             const uniqueUsers = [...new Set(users)];
-            onlineCount.innerText = uniqueUsers.length;
+            const count = uniqueUsers.length;
 
-            if (userListContainer) {
-                userListContainer.innerHTML = '';
+            // Cập nhật số lượng
+            document.getElementById('sidebar-online-count').innerText = count;
+            document.getElementById('mobile-online-count').innerText = count;
+            document.getElementById('modal-online-count').innerText = count;
+
+            // Cập nhật danh sách trên Sidebar PC
+            const sidebarList = document.getElementById('sidebar-online-users-list');
+            if (sidebarList) {
+                sidebarList.innerHTML = '';
                 uniqueUsers.forEach(uname => {
                     const li = document.createElement('li');
                     li.innerHTML = `<span style="color: #2ecc71;">●</span> <strong>${uname}</strong>`;
-                    userListContainer.appendChild(li);
+                    sidebarList.appendChild(li);
+                });
+            }
+
+            // Cập nhật danh sách trên Modal Mobile
+            const modalList = document.getElementById('modal-online-users-list');
+            if (modalList) {
+                modalList.innerHTML = '';
+                uniqueUsers.forEach(uname => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span style="color: #2ecc71;">●</span> <strong>${uname}</strong>`;
+                    modalList.appendChild(li);
                 });
             }
         });
+
+        // Hàm mở/đóng Modal Popup trên điện thoại
+        function openOnlineModal() {
+            document.getElementById('online-modal').style.display = 'flex';
+        }
+        function closeOnlineModal() {
+            document.getElementById('online-modal').style.display = 'none';
+        }
+        function closeOnlineModalOnOutside(event) {
+            if (event.target.id === 'online-modal') {
+                closeOnlineModal();
+            }
+        }
 
         async function logUserIPAndLocation() {
             try {
