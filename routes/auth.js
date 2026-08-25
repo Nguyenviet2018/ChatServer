@@ -3,7 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const supabase = require('../supabaseClient');
-
+const config = require('./config');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -13,7 +13,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // 1. Biến toàn cục lưu trạng thái khóa đăng ký (mặc định là mở: false)
 router.post('/register', async (req, res) => {
 // Kiểm tra trạng thái khóa từ biến toàn cục app.locals của Express
-    if (req.app.locals.isRegistrationLocked) {
+    if (config.isRegistrationLocked) {
         return res.status(403).json({ message: "Hệ thống đang khóa tính năng đăng ký tài khoản mới bởi quản trị viên!" });
     }
 

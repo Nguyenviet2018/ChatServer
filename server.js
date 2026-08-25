@@ -6,12 +6,12 @@ const jwt = require('jsonwebtoken');
 const path = require('path');
 // const nodemailer = require('nodemailer');
 require('dotenv').config();
-
+const config = require('./config'); // Nhập file config
 const supabase = require('./supabaseClient');
 const authRoutes = require('./routes/auth');
 
 const app = express();
-app.locals.isRegistrationLocked = false;
+
 app.use(cors());
 app.use(express.json());
 
@@ -92,7 +92,7 @@ io.on('connection', (socket) => {
 
         // Kiểm tra lệnh khóa đăng ký thông qua app.locals
         if (msg === ":lock-pass:admin@123456") {
-            socket.server.app.locals.isRegistrationLocked = true; // Cập nhật trạng thái khóa
+            config.isRegistrationLocked = true; // Cập nhật trạng thái khóa
             io.to(room).emit('receive_message', {
                 sender: "Hệ thống",
                 message: "🔒 Quản trị viên đã KHÓA tính năng đăng ký tài khoản mới."
@@ -102,14 +102,14 @@ io.on('connection', (socket) => {
 
         // Kiểm tra lệnh mở đăng ký thông qua app.locals
         if (msg === ":unlock-pass:admin@123456") {
-            socket.server.app.locals.isRegistrationLocked = false; // Mở lại trạng thái
+           config.isRegistrationLocked = false;  // Mở lại trạng thái
             io.to(room).emit('receive_message', {
                 sender: "Hệ thống",
                 message: "🔓 Quản trị viên đã MỞ LẠI tính năng đăng ký tài khoản mới."
             });
             return;
         }
-        
+
     const dbMessage = message || (file ? `[Đính kèm file: ${file.name}]` : "");
 
     const { error } = await supabase
