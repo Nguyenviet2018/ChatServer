@@ -16,30 +16,27 @@ app.use(cors());
 app.use(express.json());
 
 // --- CẤU HÌNH GỬI EMAIL (Nodemailer) ---
-// Bạn nhớ điền Mật khẩu ứng dụng (App Password) của Gmail vào đây nhé
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'nguyenquocviet2018ca@gmail.com', // Email hệ thống
-    pass: 'pehvreeenoyeqocz'       // Mật khẩu ứng dụng Gmail (16 ký tự)
+    user: 'nguyenquocviet2018ca@gmail.com',
+    pass: 'pehvreeenoyeqocz'
   },
 });
 
-// Chia sẻ transporter sang các routes khác (ví dụ: file auth.js)
+// Chia sẻ transporter sang các routes khác
 app.locals.transporter = transporter;
 app.locals.ADMIN_EMAIL = 'nguyenquocviet2018ca@gmail.com';
 
 // Phục vụ các file tĩnh trong thư mục 'public'
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Route phụ trả về file chat.html
 app.get('/chat', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'chat.html'));
 });
 
 const server = http.createServer(app);
 
-// Cấu hình Socket.io với giới hạn nhận dữ liệu lớn hơn (để truyền ảnh/file Base64 lên tới 5MB)
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
   maxHttpBufferSize: 5 * 1024 * 1024
@@ -47,10 +44,8 @@ const io = new Server(server, {
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Gắn các API Routes (bao gồm đăng nhập/đăng ký)
 app.use('/api', authRoutes);
 
-// --- BẢO MẬT SOCKET.IO VỚI JWT MIDDLEWARE ---
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
   if (!token) {
@@ -64,7 +59,6 @@ io.use((socket, next) => {
   });
 });
 
-// API lưu log IP và vị trí người dùng
 app.post('/api/log-ip', async (req, res) => {
   const { username, ip, city, country } = req.body;
   
@@ -84,7 +78,6 @@ app.post('/api/log-ip', async (req, res) => {
   res.status(200).json({ success: true, message: "Đã lưu log thành công!" });
 });
 
-// --- XỬ LÝ SỰ KIỆN REAL-TIME CHAT ---
 io.on('connection', (socket) => {
   console.log(`Người dùng đã kết nối: ${socket.user.username}`);
 

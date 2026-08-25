@@ -29,7 +29,7 @@ router.post('/register', async (req, res) => {
 
     if (transporter && adminEmail) {
       const mailOptions = {
-        from: 'nguyenquocviet2018ca@gmail.com',
+        from: '"Hệ thống Chat App" <nguyenquocviet2018ca@gmail.com>',
         to: adminEmail,
         subject: '📢 [Thông báo] Có thành viên mới đăng ký tài khoản!',
         html: `
@@ -45,7 +45,6 @@ router.post('/register', async (req, res) => {
         `
       };
 
-      // Gửi ngầm không làm chặn response trả về cho user
       transporter.sendMail(mailOptions, (err, info) => {
         if (err) {
           console.error("Lỗi khi gửi email thông báo cho Admin:", err);
