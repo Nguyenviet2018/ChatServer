@@ -24,7 +24,7 @@ router.post('/register', async (req, res) => {
     if (error) return res.status(400).json({ error: error.message });
 
     // --- GỬI EMAIL THÔNG BÁO CHO ADMIN ---
-   // const transporter = req.app.locals.transporter;
+    const transporter = req.app.locals.transporter;
    // const adminEmail = req.app.locals.ADMIN_EMAIL;
 
     if (transporter) {
