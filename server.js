@@ -21,13 +21,13 @@ app.use(express.json());
         port: 465, // Hoặc 587
         secure: true, // true cho port 465, false cho các port khác
         auth: {
-        user: process.env.GMAIL_USER || 'nguyenquocviet2018ca@gmail.com',
-        pass: process.env.GMAIL_PASS || 'ytuckldjgufyftya'
+        user:'nguyenquocviet2018ca@gmail.com',
+        pass:'ytuckldjgufyftya'
         }
     });
 // Chia sẻ transporter sang các routes khác
 app.locals.transporter = transporter;
-app.locals.ADMIN_EMAIL = 'nguyenquocviet2018ca@gmail.com';
+//app.locals.ADMIN_EMAIL = 'nguyenquocviet2018ca@gmail.com';
 
 // Phục vụ các file tĩnh trong thư mục 'public'
 app.use(express.static(path.join(__dirname, 'public')));

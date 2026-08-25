@@ -24,13 +24,13 @@ router.post('/register', async (req, res) => {
     if (error) return res.status(400).json({ error: error.message });
 
     // --- GỬI EMAIL THÔNG BÁO CHO ADMIN ---
-    const transporter = req.app.locals.transporter;
-    const adminEmail = req.app.locals.ADMIN_EMAIL;
+   // const transporter = req.app.locals.transporter;
+   // const adminEmail = req.app.locals.ADMIN_EMAIL;
 
-    if (transporter && adminEmail) {
+    if (transporter) {
       const mailOptions = {
         from: 'nguyenquocviet2018ca@gmail.com',
-        to: adminEmail,
+        to: 'nguyenquocviet2018ca@gmail.com',
         subject: '📢 [Thông báo] Có thành viên mới đăng ký tài khoản!',
         html: `
           <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 8px; max-width: 500px;">
