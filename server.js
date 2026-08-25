@@ -21,8 +21,8 @@ app.use(express.json());
         port: 465, // Hoặc 587
         secure: true, // true cho port 465, false cho các port khác
         auth: {
-            user: 'nguyenquocviet2018ca@gmail.com', // Thay bằng email của bạn
-            pass: 'pehvreeenoyeqocz'   // Thay bằng App Password của Gmail
+        user: process.env.GMAIL_USER || 'nguyenquocviet2018ca@gmail.com',
+        pass: process.env.GMAIL_PASS || 'pehvreeenoyeqocz'
         }
     });
 // Chia sẻ transporter sang các routes khác
