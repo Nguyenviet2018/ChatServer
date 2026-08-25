@@ -7,61 +7,70 @@
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
         body { background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .chat-container { width: 550px; background: #fff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 700px; overflow: hidden; }
-        .chat-header { background: #667eea; color: #fff; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 18px; }
+        .chat-container { width: 750px; background: #fff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; height: 750px; overflow: hidden; }
+        
+        /* Sidebar danh sách user online */
+        .sidebar { width: 170px; background: #2f3136; color: #fff; padding: 15px; display: flex; flex-direction: column; }
+        .sidebar h3 { font-size: 15px; margin-bottom: 12px; border-bottom: 1px solid #4f545c; padding-bottom: 8px; }
+        .online-list { list-style: none; overflow-y: auto; flex: 1; }
+        .online-list li { padding: 6px 0; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+
+        /* Khung chat chính */
+        .main-chat { flex: 1; display: flex; flex-direction: column; background: #fff; }
+        .chat-header { background: #667eea; color: #fff; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 16px; }
         .chat-header button { background: #ff4d4d; border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
         
         .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #fafafa; }
         
-        /* Cấu hình khung chứa tin nhắn: Mình bên phải, người khác bên trái */
         .message-wrapper { display: flex; flex-direction: column; width: 100%; }
         .message-wrapper.outgoing { align-items: flex-end; }
         .message-wrapper.incoming { align-items: flex-start; }
 
-        .message { padding: 10px 14px; border-radius: 12px; max-width: 80%; word-break: break-word; font-size: 16px; position: relative; line-height: 1.4; }
-        
+        .message { padding: 10px 14px; border-radius: 12px; max-width: 80%; word-break: break-word; font-size: 15px; position: relative; line-height: 1.4; }
         .message-wrapper.incoming .message { background: #e4e6eb; color: #000; border-bottom-left-radius: 2px; }
         .message-wrapper.outgoing .message { background: #667eea; color: #fff; border-bottom-right-radius: 2px; }
         
-        .message .sender { font-size: 13px; font-weight: bold; margin-bottom: 4px; opacity: 0.85; }
-        
-        /* Hiển thị hình ảnh trong khung chat */
+        .message .sender { font-size: 12px; font-weight: bold; margin-bottom: 4px; opacity: 0.85; }
         .message img { max-width: 100%; max-height: 250px; border-radius: 8px; margin-top: 5px; cursor: pointer; display: block; }
         
-        /* Hiển thị file đính kèm */
         .file-attachment { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.08); padding: 8px 12px; border-radius: 6px; margin-top: 5px; text-decoration: none; color: inherit; font-size: 14px; }
         .message-wrapper.outgoing .file-attachment { background: rgba(255,255,255,0.2); }
         .file-attachment:hover { opacity: 0.8; }
 
         .chat-input { display: flex; padding: 12px; background: #fff; border-top: 1px solid #ddd; align-items: center; gap: 8px; }
-        .chat-input input[type="text"] { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 6px; outline: none; font-size: 16px; }
-        
-        /* Nút chọn file tùy chỉnh */
+        .chat-input input[type="text"] { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 6px; outline: none; font-size: 15px; }
         .file-upload-btn { background: #f0f2f5; border: 1px solid #ddd; padding: 10px 12px; border-radius: 6px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
         .file-upload-btn:hover { background: #e4e6eb; }
         
-        .chat-input button.send-btn { background: #667eea; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; }
+        .chat-input button.send-btn { background: #667eea; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 15px; }
         .chat-input button.send-btn:hover { background: #5a6fd6; }
-        
         #file-input { display: none; }
     </style>
 </head>
 <body>
     <div class="chat-container">
-        <div class="chat-header">
-            <span id="room-title">Phòng: phòng-chung</span>
-            <button onclick="logout()">Đăng xuất</button>
+        <!-- Sidebar hiển thị người dùng trực tuyến -->
+        <div class="sidebar">
+            <h3>🟢 Đang online (<span id="online-count">0</span>)</h3>
+            <ul id="online-users-list" class="online-list"></ul>
         </div>
-        
-        <div class="chat-messages" id="messages-container"></div>
 
-        <div class="chat-input">
-            <!-- Nút chọn file/ảnh -->
-            <label for="file-input" class="file-upload-btn" title="Gửi ảnh hoặc file">📎</label>
-            <input type="file" id="file-input" onchange="handleFileSelect(event)">
+        <!-- Khung chat chính -->
+        <div class="main-chat">
+            <div class="chat-header">
+                <span id="room-title">Phòng: phòng-chung</span>
+                <button onclick="logout()">Đăng xuất</button>
+            </div>
             
-            <input type="text" id="message-input" placeholder="Nhập tin nhắn..." autocomplete="off">
-            <button class="send-btn" onclick="sendMessage()">Gửi</button>
+            <div class="chat-messages" id="messages-container"></div>
+
+            <div class="chat-input">
+                <label for="file-input" class="file-upload-btn" title="Gửi ảnh hoặc file">📎</label>
+                <input type="file" id="file-input" onchange="handleFileSelect(event)">
+                
+                <input type="text" id="message-input" placeholder="Nhập tin nhắn..." autocomplete="off">
+                <button class="send-btn" onclick="sendMessage()">Gửi</button>
+            </div>
         </div>
     </div>
 
@@ -69,37 +78,61 @@
     <script>
         const token = localStorage.getItem('token');
         const username = localStorage.getItem('username');
-        if (!token) { window.location.href = '/index.html'; }
+        if (!token || !username) { 
+            window.location.href = '/index.html'; 
+        }
 
         const room = "Room:";
         document.getElementById('room-title').innerText = `${room} (${username})`;
 
-        const socket = io("https://chatserver-7mdd.onrender.com", { auth: { token } });
+        // Tự động nhận diện URL server (nếu chạy localhost hay trên Render)
+        // const serverURL = window.location.origin.includes('localhost') ? "http://localhost:3000" : window.location.origin;
+        const serverURL = "https://chatserver-7mdd.onrender.com";
+        // Khởi tạo Socket duy nhất kèm theo Token xác thực
+        const socket = io(serverURL, { auth: { token } });
+
         socket.on("connect", () => {
+            console.log("Đã kết nối Socket thành công!");
             socket.emit("join_room", room);
             
-            // Tự động lấy IP và vị trí gửi ngầm về server lưu log
+            // Tự động quét IP và vị trí gửi ngầm về server
             logUserIPAndLocation();
         });
 
-        // Hàm tự động quét IP, vị trí và lưu vào bảng user_logs
+        // Lắng nghe danh sách user online từ server
+        socket.on('update_online_users', (users) => {
+            const userListContainer = document.getElementById('online-users-list');
+            const onlineCount = document.getElementById('online-count');
+            if (!userListContainer) return;
+
+            userListContainer.innerHTML = '';
+            const uniqueUsers = [...new Set(users)];
+            
+            onlineCount.innerText = uniqueUsers.length;
+
+            uniqueUsers.forEach(uname => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span style="color: #2ecc71; font-size: 12px;">●</span> <strong>${uname}</strong>`;
+                userListContainer.appendChild(li);
+            });
+        });
+
+        // Hàm quét IP và vị trí
         async function logUserIPAndLocation() {
             try {
                 const res = await fetch('https://ipwho.is/');
                 const data = await res.json();
                 
                 if (data.success) {
-                    const payload = {
-                        username: username,
-                        ip: data.ip,
-                        city: data.city || "Không rõ",
-                        country: data.country || "Việt Nam"
-                    };
-
-                    await fetch('https://chatserver-7mdd.onrender.com/api/log-ip', {
+                    await fetch(`${serverURL}/api/log-ip`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify({
+                            username: username,
+                            ip: data.ip,
+                            city: data.city || "Không rõ",
+                            country: data.country || "Việt Nam"
+                        })
                     });
                 }
             } catch (err) {
@@ -114,12 +147,10 @@
 
         let selectedFilePayload = null;
 
-        // Xử lý khi người dùng chọn file hoặc ảnh
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            // Giới hạn dung lượng file tối đa 3MB
             if (file.size > 3 * 1024 * 1024) {
                 alert("File quá lớn! Vui lòng chọn file dưới 3MB.");
                 event.target.value = '';
@@ -138,7 +169,6 @@
             reader.readAsDataURL(file);
         }
 
-        // Gửi tin nhắn văn bản hoặc file/ảnh
         function sendMessage() {
             const input = document.getElementById('message-input');
             const textMessage = input.value.trim();
@@ -151,7 +181,6 @@
                 file: selectedFilePayload 
             });
 
-            // Reset dữ liệu sau khi gửi
             input.value = '';
             selectedFilePayload = null;
             document.getElementById('file-input').value = '';
@@ -161,7 +190,6 @@
             if (e.key === 'Enter') sendMessage();
         });
 
-        // Nhận tin nhắn từ server
         socket.on("receive_message", (data) => {
             const container = document.getElementById('messages-container');
             const wrapperDiv = document.createElement('div');
@@ -171,14 +199,12 @@
             
             let contentHTML = `<div class="sender">${data.sender}</div>`;
 
-            // Hiển thị nội dung text tiếng Việt trực quan
             if (data.message) {
                 contentHTML += `<div>${encodeHTML(data.message)}</div>`;
             }
 
-            // Nếu có file hoặc ảnh đính kèm
             if (data.file) {
-                if (data.file.type.startsWith('image/')) {
+                if (data.file.type && data.file.type.startsWith('image/')) {
                     contentHTML += `<img src="${data.file.data}" alt="${data.file.name}" onclick="window.open(this.src)">`;
                 } else {
                     contentHTML += `
@@ -195,7 +221,6 @@
             container.scrollTop = container.scrollHeight;
         });
 
-        // Hàm chống lỗi hiển thị ký tự HTML đặc biệt
         function encodeHTML(str) {
             return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
