@@ -4,14 +4,30 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const supabase = require('./supabaseClient');
 const authRoutes = require('./routes/auth');
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
+
+// --- CẤU HÌNH GỬI EMAIL (Nodemailer) ---
+// Bạn nhớ điền Mật khẩu ứng dụng (App Password) của Gmail vào đây nhé
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'nguyenquocviet2018ca@gmail.com', // Email hệ thống
+    pass: 'pehvreeenoyeqocz'       // Mật khẩu ứng dụng Gmail (16 ký tự)
+  },
+});
+
+// Chia sẻ transporter sang các routes khác (ví dụ: file auth.js)
+app.locals.transporter = transporter;
+app.locals.ADMIN_EMAIL = 'nguyenquocviet2018ca@gmail.com';
 
 // Phục vụ các file tĩnh trong thư mục 'public'
 app.use(express.static(path.join(__dirname, 'public')));
@@ -26,12 +42,12 @@ const server = http.createServer(app);
 // Cấu hình Socket.io với giới hạn nhận dữ liệu lớn hơn (để truyền ảnh/file Base64 lên tới 5MB)
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
-  maxHttpBufferSize: 5 * 1024 * 1024 // Giới hạn 5MB cho mỗi gói tin gửi qua socket
+  maxHttpBufferSize: 5 * 1024 * 1024
 });
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Gắn các API Routes
+// Gắn các API Routes (bao gồm đăng nhập/đăng ký)
 app.use('/api', authRoutes);
 
 // --- BẢO MẬT SOCKET.IO VỚI JWT MIDDLEWARE ---
@@ -43,10 +59,11 @@ io.use((socket, next) => {
 
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
     if (err) return next(new Error("Lỗi xác thực: Token không hợp lệ!"));
-    socket.user = decoded; // Gán thông tin user vào socket
+    socket.user = decoded; 
     next();
   });
 });
+
 // API lưu log IP và vị trí người dùng
 app.post('/api/log-ip', async (req, res) => {
   const { username, ip, city, country } = req.body;
@@ -66,25 +83,22 @@ app.post('/api/log-ip', async (req, res) => {
 
   res.status(200).json({ success: true, message: "Đã lưu log thành công!" });
 });
+
 // --- XỬ LÝ SỰ KIỆN REAL-TIME CHAT ---
 io.on('connection', (socket) => {
   console.log(`Người dùng đã kết nối: ${socket.user.username}`);
 
-  // Tham gia phòng chat
   socket.on('join_room', (room) => {
     socket.join(room);
     console.log(`User ${socket.user.username} đã vào phòng: ${room}`);
   });
 
-  // Nhận, xử lý lưu tin nhắn và file đính kèm
   socket.on('send_message', async (data) => {
     const { room, message, file } = data;
     const sender = socket.user.username;
 
-    // Chuẩn bị nội dung lưu vào DB (Nếu có file, lưu mô tả thay thế hoặc kết hợp)
     const dbMessage = message || (file ? `[Đính kèm file: ${file.name}]` : "");
 
-    // 1. Lưu tin nhắn mới vào cơ sở dữ liệu Supabase
     const { error } = await supabase
       .from('messages')
       .insert([{ room, sender, message: dbMessage }]);
@@ -94,44 +108,30 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // 2. Kiểm tra tổng số lượng bản ghi trong bảng messages
     const { count, error: countError } = await supabase
       .from('messages')
       .select('*', { count: 'exact', head: true });
 
-    if (!countError && count !== null) {
-      console.log(`Hiện tại đang có ${count} tin nhắn trong DB.`);
+    if (!countError && count !== null && count >= 50) {
+      const { error: deleteError } = await supabase
+        .from('messages')
+        .delete()
+        .neq('id', 0);
 
-      // Nếu số lượng đạt từ 50 bản ghi trở lên
-      if (count >= 50) {
-        console.log("Đã đạt 50 record, tiến hành xóa sạch dữ liệu bảng messages...");
-        
-        const { error: deleteError } = await supabase
-          .from('messages')
-          .delete()
-          .neq('id', 0); // Điều kiện luôn đúng để xóa toàn bộ bảng
-
-        if (deleteError) {
-          console.error("Lỗi khi xóa dữ liệu:", deleteError.message);
-        } else {
-          console.log("Đã xóa sạch dữ liệu bảng messages thành công!");
-          
-          // Gửi thông báo hệ thống về client
-          io.to(room).emit('receive_message', {
-            sender: "Hệ thống",
-            message: "⚠️ Đã đạt giới hạn 50 tin nhắn. Lịch sử chat vừa được làm sạch tự động!",
-            file: null,
-            created_at: new Date()
-          });
-        }
+      if (!deleteError) {
+        io.to(room).emit('receive_message', {
+          sender: "Hệ thống",
+          message: "⚠️ Đã đạt giới hạn 50 tin nhắn. Lịch sử chat vừa được làm sạch tự động!",
+          file: null,
+          created_at: new Date()
+        });
       }
     }
 
-    // 3. Phát lại tin nhắn (bao gồm cả nội dung text và file) cho mọi người trong phòng
     io.to(room).emit('receive_message', {
       sender,
       message,
-      file, // Truyền tiếp file/ảnh sang các client khác
+      file,
       created_at: new Date()
     });
   });
