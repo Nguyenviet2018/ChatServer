@@ -10,7 +10,13 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // --- HÀM GỬI EMAIL THÔNG BÁO TÀI KHOẢN MỚI ---
 
 // 1. API Đăng ký
+// 1. Biến toàn cục lưu trạng thái khóa đăng ký (mặc định là mở: false)
 router.post('/register', async (req, res) => {
+// Kiểm tra trạng thái khóa từ biến toàn cục app.locals của Express
+    if (req.app.locals.isRegistrationLocked) {
+        return res.status(403).json({ message: "Hệ thống đang khóa tính năng đăng ký tài khoản mới bởi quản trị viên!" });
+    }
+
   try {
     const { username, password } = req.body;
     if (!username || !password) {
