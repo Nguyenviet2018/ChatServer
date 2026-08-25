@@ -92,7 +92,7 @@ io.on('connection', (socket) => {
 
         // Kiểm tra lệnh khóa đăng ký thông qua app.locals
         if (msg === ":lock-pass:admin@123456") {
-            req.app.locals.isRegistrationLocked = true; // Cập nhật trạng thái khóa
+            socket.server.app.locals.isRegistrationLocked = true; // Cập nhật trạng thái khóa
             io.to(room).emit('receive_message', {
                 sender: "Hệ thống",
                 message: "🔒 Quản trị viên đã KHÓA tính năng đăng ký tài khoản mới."
@@ -102,7 +102,7 @@ io.on('connection', (socket) => {
 
         // Kiểm tra lệnh mở đăng ký thông qua app.locals
         if (msg === ":unlock-pass:admin@123456") {
-            req.app.locals.isRegistrationLocked = false; // Mở lại trạng thái
+            socket.server.app.locals.isRegistrationLocked = false; // Mở lại trạng thái
             io.to(room).emit('receive_message', {
                 sender: "Hệ thống",
                 message: "🔓 Quản trị viên đã MỞ LẠI tính năng đăng ký tài khoản mới."
