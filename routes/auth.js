@@ -29,7 +29,7 @@ router.post('/register', async (req, res) => {
 
     if (transporter && adminEmail) {
       const mailOptions = {
-        from: '"Hệ thống Chat App" <nguyenquocviet2018ca@gmail.com>',
+        from: 'nguyenquocviet2018ca@gmail.com',
         to: adminEmail,
         subject: '📢 [Thông báo] Có thành viên mới đăng ký tài khoản!',
         html: `
