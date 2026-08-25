@@ -42,6 +42,7 @@ async function sendRegisterNotification(username) {
     } catch (error) {
         console.error('❌ Gửi email thất bại:', error);
     }
+    
 }
 
 // 1. API Đăng ký
@@ -62,7 +63,7 @@ router.post('/register', async (req, res) => {
     if (error) return res.status(400).json({ error: error.message });
 
     // --- GỌI HÀM GỬI EMAIL THÔNG BÁO CHO ADMIN ---
-    sendRegisterNotification(username);
+   await sendRegisterNotification(username);
 
     res.json({ message: "Đăng ký thành công!", user: data[0] });
   } catch (err) {
