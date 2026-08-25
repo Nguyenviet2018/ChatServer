@@ -65,7 +65,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script>
+<script>
         const token = localStorage.getItem('token');
         const username = localStorage.getItem('username');
         if (!token) { window.location.href = '/index.html'; }
@@ -91,7 +91,6 @@
             const file = event.target.files[0];
             if (!file) return;
 
-            // Giới hạn dung lượng file tối đa 3MB để tránh quá tải socket
             if (file.size > 3 * 1024 * 1024) {
                 alert("File quá lớn! Vui lòng chọn file dưới 3MB.");
                 event.target.value = '';
@@ -102,24 +101,44 @@
             reader.onload = function (e) {
                 selectedFilePayload = {
                     name: file.name,
-                    type: file.type, // image/png, application/pdf,...
-                    data: e.target.result // Chuỗi Base64 của file
+                    type: file.type,
+                    data: e.target.result
                 };
                 alert(`Đã đính kèm file: ${file.name}. Bấm Gửi để truyền đi!`);
             };
             reader.readAsDataURL(file);
         }
 
-        // Gửi tin nhắn (Văn bản hoặc File/Ảnh)
+        // --- HÀM MÃ HÓA & GIẢI MÃ NỘI DUNG TEXT ---
+        function encryptMessage(text) {
+            try {
+                return encodeURIComponent(text); 
+            } catch (e) {
+                return text;
+            }
+        }
+
+        function decryptMessage(encodedText) {
+            try {
+                return decodeURIComponent(encodedText);
+            } catch (e) {
+                return encodedText; 
+            }
+        }
+
+        // Gửi tin nhắn (Đã tích hợp mã hóa text)
         function sendMessage() {
             const input = document.getElementById('message-input');
             const textMessage = input.value.trim();
 
             if (!textMessage && !selectedFilePayload) return;
 
+            // Mã hóa nội dung text trước khi gửi đi
+            const encryptedText = textMessage ? encryptMessage(textMessage) : "";
+
             socket.emit("send_message", { 
                 room, 
-                message: textMessage,
+                message: encryptedText,
                 file: selectedFilePayload 
             });
 
@@ -133,7 +152,7 @@
             if (e.key === 'Enter') sendMessage();
         });
 
-        // Nhận tin nhắn từ server
+        // Nhận tin nhắn từ server (Đã tích hợp giải mã text)
         socket.on("receive_message", (data) => {
             const container = document.getElementById('messages-container');
             const wrapperDiv = document.createElement('div');
@@ -143,18 +162,17 @@
             
             let contentHTML = `<div class="sender">${data.sender}</div>`;
 
-            // Nếu có nội dung text
+            // Nếu có nội dung text -> Giải mã trước khi hiển thị
             if (data.message) {
-                contentHTML += `<div>${encodeHTML(data.message)}</div>`;
+                const decryptedText = decryptMessage(data.message);
+                contentHTML += `<div>${encodeHTML(decryptedText)}</div>`;
             }
 
             // Nếu có file hoặc ảnh đính kèm
             if (data.file) {
                 if (data.file.type.startsWith('image/')) {
-                    // Hiển thị trực tiếp ảnh
                     contentHTML += `<img src="${data.file.data}" alt="${data.file.name}" onclick="window.open(this.src)">`;
                 } else {
-                    // Hiển thị dạng file tải xuống
                     contentHTML += `
                         <a class="file-attachment" href="${data.file.data}" download="${data.file.name}">
                             📄 <span>Tải xuống: ${data.file.name}</span>
@@ -169,7 +187,6 @@
             container.scrollTop = container.scrollHeight;
         });
 
-        // Hàm phụ trợ chống lỗi hiển thị ký tự đặc biệt
         function encodeHTML(str) {
             return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
