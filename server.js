@@ -4,7 +4,7 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const path = require('path');
-const nodemailer = require('nodemailer');
+// const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const supabase = require('./supabaseClient');
@@ -15,19 +15,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- CẤU HÌNH GỬI EMAIL (Nodemailer) ---
-  const transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465, // Hoặc 587
-        secure: true, // true cho port 465, false cho các port khác
-        auth: {
-        user:'nguyenquocviet2018ca@gmail.com',
-        pass:'ytuckldjgufyftya'
-        }
-    });
-// Chia sẻ transporter sang các routes khác
-app.locals.transporter = transporter;
-//app.locals.ADMIN_EMAIL = 'nguyenquocviet2018ca@gmail.com';
+
 
 // Phục vụ các file tĩnh trong thư mục 'public'
 app.use(express.static(path.join(__dirname, 'public')));

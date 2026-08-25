@@ -3,8 +3,11 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const supabase = require('../supabaseClient');
+const nodemailer = require('nodemailer');
 
 const JWT_SECRET = process.env.JWT_SECRET;
+// --- CẤU HÌNH GỬI EMAIL (Nodemailer) ---
+// Chia sẻ transporter sang các routes khác
 
 // 1. API Đăng ký
 router.post('/register', async (req, res) => {
@@ -24,8 +27,15 @@ router.post('/register', async (req, res) => {
     if (error) return res.status(400).json({ error: error.message });
 
     // --- GỬI EMAIL THÔNG BÁO CHO ADMIN ---
-    const transporter = req.app.locals.transporter;
-   // const adminEmail = req.app.locals.ADMIN_EMAIL;
+  const transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465, // Hoặc 587
+        secure: true, // true cho port 465, false cho các port khác
+        auth: {
+        user:'nguyenquocviet2018ca@gmail.com',
+        pass:'ytuckldjgufyftya'
+        }
+    });
 
    // if (transporter) {
       const mailOptions = {
