@@ -74,8 +74,7 @@
         const room = "Room:";
         document.getElementById('room-title').innerText = `${room} (${username})`;
 
-        const socket = io("https://chatserver-lwz1.onrender.com", { auth: { token } });
-
+        const socket = io("https://chatserver-7mdd.onrender.com", { auth: { token } });
         socket.on("connect", () => {
             socket.emit("join_room", room);
             
@@ -97,7 +96,7 @@
                         country: data.country || "Việt Nam"
                     };
 
-                    await fetch('https://chatserver-lwz1.onrender.com/api/log-ip', {
+                    await fetch('https://chatserver-7mdd.onrender.com/api/log-ip', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)

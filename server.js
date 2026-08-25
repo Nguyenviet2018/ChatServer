@@ -22,7 +22,7 @@ app.use(express.json());
         secure: true, // true cho port 465, false cho các port khác
         auth: {
         user: process.env.GMAIL_USER || 'nguyenquocviet2018ca@gmail.com',
-        pass: process.env.GMAIL_PASS || 'pehvreeenoyeqocz'
+        pass: process.env.GMAIL_PASS || 'ytuckldjgufyftya'
         }
     });
 // Chia sẻ transporter sang các routes khác
