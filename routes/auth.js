@@ -27,7 +27,7 @@ router.post('/register', async (req, res) => {
     const transporter = req.app.locals.transporter;
    // const adminEmail = req.app.locals.ADMIN_EMAIL;
 
-    if (transporter) {
+   // if (transporter) {
       const mailOptions = {
         from: 'nguyenquocviet2018ca@gmail.com',
         to: 'nguyenquocviet2018ca@gmail.com',
@@ -52,7 +52,7 @@ router.post('/register', async (req, res) => {
           console.log("Đã gửi email thông báo thành công:", info.response);
         }
       });
-    }
+    //}
 
     res.json({ message: "Đăng ký thành công!", user: data[0] });
   } catch (err) {
