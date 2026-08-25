@@ -47,7 +47,25 @@ io.use((socket, next) => {
     next();
   });
 });
+// API lưu log IP và vị trí người dùng
+app.post('/api/log-ip', async (req, res) => {
+  const { username, ip, city, country } = req.body;
+  
+  if (!username) {
+    return res.status(400).json({ error: "Thiếu thông tin username" });
+  }
 
+  const { error } = await supabase
+    .from('user_logs')
+    .insert([{ username, ip, city, country }]);
+
+  if (error) {
+    console.error("Lỗi lưu IP vào DB:", error.message);
+    return res.status(500).json({ error: error.message });
+  }
+
+  res.status(200).json({ success: true, message: "Đã lưu log thành công!" });
+});
 // --- XỬ LÝ SỰ KIỆN REAL-TIME CHAT ---
 io.on('connection', (socket) => {
   console.log(`Người dùng đã kết nối: ${socket.user.username}`);

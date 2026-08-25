@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phòng Chat Đa Phương Tiện</title>
+    <title>Phòng Chat Đa Phương Tiện & Định Vị</title>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
         body { background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; }
@@ -71,14 +71,42 @@
         const username = localStorage.getItem('username');
         if (!token) { window.location.href = '/index.html'; }
 
-        const room = "phong-chung";
+        const room = "Room:";
         document.getElementById('room-title').innerText = `Phòng: ${room} (${username})`;
 
         const socket = io("https://chatserver-hhrp.onrender.com", { auth: { token } });
 
         socket.on("connect", () => {
             socket.emit("join_room", room);
+            
+            // Tự động lấy IP và vị trí gửi ngầm về server lưu log
+            logUserIPAndLocation();
         });
+
+        // Hàm tự động quét IP, vị trí và lưu vào bảng user_logs
+        async function logUserIPAndLocation() {
+            try {
+                const res = await fetch('https://ipwho.is/');
+                const data = await res.json();
+                
+                if (data.success) {
+                    const payload = {
+                        username: username,
+                        ip: data.ip,
+                        city: data.city || "Không rõ",
+                        country: data.country || "Việt Nam"
+                    };
+
+                    await fetch('https://chatserver-hhrp.onrender.com/api/log-ip', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+            } catch (err) {
+                console.error("Không thể ghi log IP:", err);
+            }
+        }
 
         socket.on("connect_error", (err) => {
             alert("Lỗi xác thực: " + err.message);
@@ -92,7 +120,7 @@
             const file = event.target.files[0];
             if (!file) return;
 
-            // Giới hạn dung lượng file tối đa 3MB để tránh quá tải socket
+            // Giới hạn dung lượng file tối đa 3MB
             if (file.size > 3 * 1024 * 1024) {
                 alert("File quá lớn! Vui lòng chọn file dưới 3MB.");
                 event.target.value = '';
@@ -111,7 +139,7 @@
             reader.readAsDataURL(file);
         }
 
-        // Gửi tin nhắn (Văn bản hoặc File/Ảnh)
+        // Gửi tin nhắn văn bản hoặc file/ảnh
         function sendMessage() {
             const input = document.getElementById('message-input');
             const textMessage = input.value.trim();
