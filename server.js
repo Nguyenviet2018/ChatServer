@@ -22,8 +22,11 @@ app.get('/chat', (req, res) => {
 });
 
 const server = http.createServer(app);
+
+// Cấu hình Socket.io với giới hạn nhận dữ liệu lớn hơn (để truyền ảnh/file Base64 lên tới 5MB)
 const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET", "POST"] }
+  cors: { origin: "*", methods: ["GET", "POST"] },
+  maxHttpBufferSize: 5 * 1024 * 1024 // Giới hạn 5MB cho mỗi gói tin gửi qua socket
 });
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -55,16 +58,18 @@ io.on('connection', (socket) => {
     console.log(`User ${socket.user.username} đã vào phòng: ${room}`);
   });
 
-  // Nhận và lưu tin nhắn
-// Nhận và lưu tin nhắn
+  // Nhận, xử lý lưu tin nhắn và file đính kèm
   socket.on('send_message', async (data) => {
-    const { room, message } = data;
+    const { room, message, file } = data;
     const sender = socket.user.username;
+
+    // Chuẩn bị nội dung lưu vào DB (Nếu có file, lưu mô tả thay thế hoặc kết hợp)
+    const dbMessage = message || (file ? `[Đính kèm file: ${file.name}]` : "");
 
     // 1. Lưu tin nhắn mới vào cơ sở dữ liệu Supabase
     const { error } = await supabase
       .from('messages')
-      .insert([{ room, sender, message }]);
+      .insert([{ room, sender, message: dbMessage }]);
 
     if (error) {
       console.error("Lỗi lưu tin nhắn vào DB:", error.message);
@@ -72,7 +77,6 @@ io.on('connection', (socket) => {
     }
 
     // 2. Kiểm tra tổng số lượng bản ghi trong bảng messages
-    // Dùng { count: 'exact', head: true } để Supabase chỉ đếm số lượng nhanh chóng mà không cần tải dữ liệu về
     const { count, error: countError } = await supabase
       .from('messages')
       .select('*', { count: 'exact', head: true });
@@ -84,33 +88,32 @@ io.on('connection', (socket) => {
       if (count >= 50) {
         console.log("Đã đạt 50 record, tiến hành xóa sạch dữ liệu bảng messages...");
         
-        // Xóa toàn bộ dữ liệu trong bảng messages
-        // Lưu ý: eq('room', room) nếu bạn chỉ muốn xóa trong phòng đó, 
-        // còn nếu muốn xóa sạch tất cả phòng thì bỏ điều kiện .eq đi.
         const { error: deleteError } = await supabase
           .from('messages')
           .delete()
-          .neq('id', 0); // Điều kiện luôn đúng để xóa toàn bộ bảng (hoặc dùng mẹo lọc id != 0)
+          .neq('id', 0); // Điều kiện luôn đúng để xóa toàn bộ bảng
 
         if (deleteError) {
           console.error("Lỗi khi xóa dữ liệu:", deleteError.message);
         } else {
           console.log("Đã xóa sạch dữ liệu bảng messages thành công!");
           
-          // (Tùy chọn) Gửi thông báo hệ thống về client để làm mới giao diện chat nếu cần
+          // Gửi thông báo hệ thống về client
           io.to(room).emit('receive_message', {
             sender: "Hệ thống",
             message: "⚠️ Đã đạt giới hạn 50 tin nhắn. Lịch sử chat vừa được làm sạch tự động!",
+            file: null,
             created_at: new Date()
           });
         }
       }
     }
 
-    // 3. Phát lại tin nhắn cho mọi người trong phòng
+    // 3. Phát lại tin nhắn (bao gồm cả nội dung text và file) cho mọi người trong phòng
     io.to(room).emit('receive_message', {
       sender,
       message,
+      file, // Truyền tiếp file/ảnh sang các client khác
       created_at: new Date()
     });
   });
@@ -122,5 +125,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Server đang chạy tại: https://chatserver-hhrp.onrender.com:${PORT}`);
+  console.log(`Server đang chạy thành công trên cổng ${PORT}`);
 });
