@@ -3,7 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const supabase = require('../supabaseClient');
-const config = require('./config');
+const config = require('../config');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
